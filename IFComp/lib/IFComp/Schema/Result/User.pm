@@ -293,8 +293,8 @@ __PACKAGE__->has_many(
 
 #>>>
 
-# Created by DBIx::Class::Schema::Loader v0.07049 @ 2021-05-19 22:44:48
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:4JWmDJfseKcu5swYXUeJoQ
+# Created by DBIx::Class::Schema::Loader v0.07049 @ 2021-05-26 01:36:50
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ULwcJUdKVjLtghT8jrK7Mg
 
 __PACKAGE__->add_column(
     '+password' => {
