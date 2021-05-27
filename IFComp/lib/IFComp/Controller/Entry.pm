@@ -60,12 +60,13 @@ sub root : Chained('/') : PathPart('entry') : CaptureArgs(0) {
     }
 
     my @entries = $c->user->get_object->current_comp_entries;
-    my @collabs = $c->model('IFCompDB::EntryCoauthor')->search({ coauthor => $c->user });
+    my @collabs = $c->model('IFCompDB::EntryCoauthor')->search({ coauthor => $c->user->get_object->id });
 
     my $current_comp = $c->model('IFCompDB::Comp')->current_comp;
 
     $c->stash(
         form         => $self->form,
+        coauthorship_form => $self->coauthorship_form,
         entries      => \@entries,
         collabs      => \@collabs,
         current_comp => $current_comp,
@@ -88,6 +89,8 @@ sub fetch_entry : Chained('root') : PathPart('') : CaptureArgs(1) {
 
 sub list : Chained('root') : PathPart('') : Args(0) {
     my ( $self, $c ) = @_;
+
+    $self->_process_coauthorship_form($c);
 }
 
 sub preview : Chained('root') : PathPart('preview') : Args(0) {
@@ -248,6 +251,8 @@ sub _build_coauthorship_form {
 sub _process_form {
     my ( $self, $c ) = @_;
 
+    warn "in _process_form";
+
     $c->stash(
         form     => $self->form,
         template => 'entry/update.tt',
@@ -346,7 +351,37 @@ sub _process_withdrawal_form {
 }
 
 sub _process_coauthorship_form {
-    # TODO
+    my ( $self, $c ) = @_;
+    my $code = $c->req->parameters->{"coauthorship.add_code"};
+
+    if ( defined($code) && $code ne "" ) {
+        my $entry = $c->model('IFCompDB::Entry')->find({ code => $code });
+
+        if ( defined($entry) ) {
+
+            my $settings = { coauthor => $c->user->get_object, reveal_pseudonym => 0 };
+            if ( $c->req->parameters->{"coauthorship.pseudonym"} ne "" ) {
+                $settings->{"pseudonym"} = $c->req->parameters->{"coauthorship.pseudonym"};
+            }
+            if ( $c->req->parameters->{"coauthorship.reveal_pseudonym"} eq "on" ) {
+                $settings->{"reveal_pseudonym"} = 1;
+            }
+            $entry->add_to_entry_coauthors($settings);
+            $c->res->redirect( $c->uri_for_action('/entry/list') );
+        } else {
+            $c->stash({ entry_not_found => $code });
+        }
+    } elsif ( $c->req->parameters->{"coauthorship.remove.submit"} ) {
+        my $entry_id = $c->req->parameters->{"coauthorship.remove"};
+        my $join_table = $c->model('IFCompDB::EntryCoauthor')->search({ entry => $entry_id, coauthor => $c->user->get_object->id });
+        # $entry->remove_from_entry_coauthors({ coauthor => $c->user->get_object });
+        $join_table->delete;
+        $c->res->redirect( $c->uri_for_action('/entry/list') );
+    } else {
+        warn "process co-author - no code defined";
+    }
+
+    $c->stash->{coauthorship_form} = $self->coauthorship_form;
 }
 
 =encoding utf8
